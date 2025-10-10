@@ -10,3 +10,5 @@
 看中了品牌、造型，可玩性也很高。才1100元人民币
 http://img.blog.163.com/photo/nu4CtVOaNX2Bx0XSy7x_7w==/5371105505593239201.jpgsk65" TITLE="新手机——siemens sk65" />
 http://img.blog.163.com/photo/pBPsdXy1mGAdZecg6b3kHw==/5371105505593239203.jpgsk65" TITLE="新手机——siemens sk65" />
+
+<!-- ##{"timestamp":1140933120}## -->
