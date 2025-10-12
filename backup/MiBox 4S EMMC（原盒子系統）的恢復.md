@@ -1,17 +1,17 @@
-1.备份文件所在位置：  
+1.備份文件所在位置：  
 >/media/devmon/ZhaoYangE40/009xznetdisk/Mi4/Mibox4s/miui_backup/BACKUP-arm-64-emmc.img.gz  
 
-2.armbian启动盘所在盘位：  
+2.armbian啟動盤所在盤位：  
 >MiNAS（T420）  
 
-3.运行U盘启动APP  
+3.運行U盤啟動APP  
 
-4.检查ddbr文件夹内有没有img.gz文件  
+4.檢查ddbr文件夾內有沒有img.gz文件  
 
-5.执行命令  
+5.執行命令  
 >“armbian-ddbr”  
 
-6.选R（Restore）
+6.選R（Restore）
 
 
 
