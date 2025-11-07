@@ -63,6 +63,29 @@ python2级作业2.0.py
                 print(' ',end='')
         print()
     '''
+    
+    '''n = int(input())
+        for i in range(n):
+            print(' ' * (n - i - 1), end='')
+            if i == 0:
+                print('*' * n)
+            else:
+                print('*' + ' ' * (n + 2*i - 2) + '*')
+        for i in range(n):  
+            print(' ' * i, end='')
+            if i == 0:
+                if n == 1:
+                    print('*')
+                else:
+                    print('*' + ' ' * (3*n - 4) + '*')
+            elif i == n - 1:
+                print('*')
+            else:
+                m = 3*n - 4 - 2*i
+                print('*' + ' ' *m+ '*')
+    
+    '''
+
 
 python2级作业3.0.py
 
@@ -153,65 +176,4 @@ python2级作业3.0.py
                     m=m+d//29
                     d=d%29+1
     print(y,m,d,h)
-    '''
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    '''n = int(input())
-        for i in range(n):
-            print(' ' * (n - i - 1), end='')
-            if i == 0:
-                print('*' * n)
-            else:
-                print('*' + ' ' * (n + 2*i - 2) + '*')
-        for i in range(n):  
-            print(' ' * i, end='')
-            if i == 0:
-                if n == 1:
-                    print('*')
-                else:
-                    print('*' + ' ' * (3*n - 4) + '*')
-            elif i == n - 1:
-                print('*')
-            else:
-                m = 3*n - 4 - 2*i
-                print('*' + ' ' *m+ '*')
-    
     '''
