@@ -55,16 +55,17 @@ python2级作业2.0.py
             else:
                 print(' ',end='')
         print() 
-'''for i in range(1,n):
-    for j in range(n*3-2,0,-1):
-        if i+j==n-1 or i+j==n*4-2:
-            print('*',end='')
-        else:
-            print(' ',end='')
-    print()
-'''
+    '''for i in range(1,n):
+        for j in range(n*3-2,0,-1):
+            if i+j==n-1 or i+j==n*4-2:
+                print('*',end='')
+            else:
+                print(' ',end='')
+        print()
+    '''
 
 python2级作业3.0.py
+
     '''n,m=map(int,input().split())
     for i in range(1,n+1):
         print([i*j for j in range(1,n+1)])
