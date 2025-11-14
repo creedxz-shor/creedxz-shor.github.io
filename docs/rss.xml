@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<rss xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" version="2.0"><channel><title>I_Explorer的部落格</title><link>http://blog.832588.xyz</link><description>The only hope you have is to accept the fact that you're already dead, and the sooner you accept that, the sooner you'll be able to function as a soldier's supposed to function. Without mercy, without compassion, without remorse. All war depends on it.</description><copyright>I_Explorer的部落格</copyright><docs>http://www.rssboard.org/rss-specification</docs><generator>python-feedgen</generator><image><url>https://avatars.githubusercontent.com/u/187481172?s=400&amp;u=fd784b652a5f3243acbdb266b9f7685f60813ea2&amp;v=4</url><title>avatar</title><link>http://blog.832588.xyz</link></image><lastBuildDate>Fri, 14 Nov 2025 12:40:40 +0000</lastBuildDate><managingEditor>I_Explorer的部落格</managingEditor><ttl>60</ttl><webMaster>I_Explorer的部落格</webMaster><item><title>Yao-Python</title><link>http://blog.832588.xyz/post/Yao-Python.html</link><description>    a=int(input())
+<rss xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" version="2.0"><channel><title>I_Explorer的部落格</title><link>http://blog.832588.xyz</link><description>The only hope you have is to accept the fact that you're already dead, and the sooner you accept that, the sooner you'll be able to function as a soldier's supposed to function. Without mercy, without compassion, without remorse. All war depends on it.</description><copyright>I_Explorer的部落格</copyright><docs>http://www.rssboard.org/rss-specification</docs><generator>python-feedgen</generator><image><url>https://avatars.githubusercontent.com/u/187481172?s=400&amp;u=fd784b652a5f3243acbdb266b9f7685f60813ea2&amp;v=4</url><title>avatar</title><link>http://blog.832588.xyz</link></image><lastBuildDate>Fri, 14 Nov 2025 12:41:27 +0000</lastBuildDate><managingEditor>I_Explorer的部落格</managingEditor><ttl>60</ttl><webMaster>I_Explorer的部落格</webMaster><item><title>Yao-Python</title><link>http://blog.832588.xyz/post/Yao-Python.html</link><description>    a=int(input())
     h=0
     for i in range(1,a+1):
         b=i%10
@@ -179,45 +179,46 @@ python2级作业3.0.py
     print(y,m,d,h)
     '''
 python2级作业4.0
-        x,n=input().split()
-        x=int(x)
-        n=int(n)
-        a=[]
-        g=[]
-        e=0
-        f=0
-        for i in range(n):
-            b=input()
-            a.append(b)
-        for j in a:
-            for m in j:
-                d=0
-                c=int(m)
-                d+=c
-                if d==x:
-                    g.append(j)
-                    e+=1
-                    f+=int(j)
-        print(f,e)
-        for h in g:
-            print(h,end=' ')
-            
-        '''n,k=input().split()
-        c=int(n)
-        d=int(k)
-        a=[]
-        for i in range(c):
-            m=input()
-            a.append(m)
-        for j in a:
-            b=int(j)
-            if b&gt;d:
-                print(max(a),end=' ')
-            elif b&lt;d:
-                print(min(a),end=' ')
-            else:
-                print(k,end=' ')
-        '''
+
+    x,n=input().split()
+    x=int(x)
+    n=int(n)
+    a=[]
+    g=[]
+    e=0
+    f=0
+    for i in range(n):
+        b=input()
+        a.append(b)
+    for j in a:
+        for m in j:
+            d=0
+            c=int(m)
+            d+=c
+            if d==x:
+                g.append(j)
+                e+=1
+                f+=int(j)
+    print(f,e)
+    for h in g:
+        print(h,end=' ')
+        
+    '''n,k=input().split()
+    c=int(n)
+    d=int(k)
+    a=[]
+    for i in range(c):
+        m=input()
+        a.append(m)
+    for j in a:
+        b=int(j)
+        if b&gt;d:
+            print(max(a),end=' ')
+        elif b&lt;d:
+            print(min(a),end=' ')
+        else:
+            print(k,end=' ')
+    '''
 。</description><guid isPermaLink="true">http://blog.832588.xyz/post/Yao-Python.html</guid><pubDate>Thu, 23 Oct 2025 12:55:48 +0000</pubDate></item><item><title>考試分數分析系統備份位置</title><link>http://blog.832588.xyz/post/kao-shi-fen-shu-fen-xi-xi-tong-bei-fen-wei-zhi.html</link><description>考试分数分析系统的備份位於：  
 &gt;/media/devmon/casadocker/003huchuan/考试分数分析系统。</description><guid isPermaLink="true">http://blog.832588.xyz/post/kao-shi-fen-shu-fen-xi-xi-tong-bei-fen-wei-zhi.html</guid><pubDate>Thu, 16 Oct 2025 08:23:40 +0000</pubDate></item><item><title>預算的本地備份</title><link>http://blog.832588.xyz/post/yu-suan-de-ben-di-bei-fen.html</link><description>預算的備份文件位於：  
 &gt;/media/devmon/ZhaoYangE40/013Personals/预算。</description><guid isPermaLink="true">http://blog.832588.xyz/post/yu-suan-de-ben-di-bei-fen.html</guid><pubDate>Tue, 14 Oct 2025 03:51:48 +0000</pubDate></item><item><title>新浪博客的本地備份</title><link>http://blog.832588.xyz/post/xin-lang-bo-ke-de-ben-di-bei-fen.html</link><description>新浪博客的備份文件位於：
