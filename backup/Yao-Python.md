@@ -178,43 +178,42 @@ python2级作业3.0.py
     print(y,m,d,h)
     '''
 python2级作业4.0
-    x,n=input().split()
-    x=int(x)
-    n=int(n)
-    a=[]
-    g=[]
-    e=0
-    f=0
-    for i in range(n):
-        b=input()
-        a.append(b)
-    for j in a:
-        for m in j:
-            d=0
-            c=int(m)
-            d+=c
-            if d==x:
-                g.append(j)
-                e+=1
-                f+=int(j)
-    print(f,e)
-    for h in g:
-        print(h,end=' ')
-        
-    '''n,k=input().split()
-    c=int(n)
-    d=int(k)
-    a=[]
-    for i in range(c):
-        m=input()
-        a.append(m)
-    for j in a:
-        b=int(j)
-        if b>d:
-            print(max(a),end=' ')
-        elif b<d:
-            print(min(a),end=' ')
-        else:
-            print(k,end=' ')
-    '''
-    
+        x,n=input().split()
+        x=int(x)
+        n=int(n)
+        a=[]
+        g=[]
+        e=0
+        f=0
+        for i in range(n):
+            b=input()
+            a.append(b)
+        for j in a:
+            for m in j:
+                d=0
+                c=int(m)
+                d+=c
+                if d==x:
+                    g.append(j)
+                    e+=1
+                    f+=int(j)
+        print(f,e)
+        for h in g:
+            print(h,end=' ')
+            
+        '''n,k=input().split()
+        c=int(n)
+        d=int(k)
+        a=[]
+        for i in range(c):
+            m=input()
+            a.append(m)
+        for j in a:
+            b=int(j)
+            if b>d:
+                print(max(a),end=' ')
+            elif b<d:
+                print(min(a),end=' ')
+            else:
+                print(k,end=' ')
+        '''
