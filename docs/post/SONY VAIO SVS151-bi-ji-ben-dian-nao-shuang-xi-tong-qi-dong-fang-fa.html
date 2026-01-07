@@ -153,7 +153,9 @@ body{box-sizing: border-box;min-width: 200px;max-width: 900px;margin: 20px auto;
 <li>
 <p>在文件末尾，<strong>另起一行</strong>，粘贴以下内容（注意大括号格式）：</p>
 <div class="highlight highlight-source-shell"><pre class="notranslate">menuentry <span class="pl-s"><span class="pl-pds">"</span>Windows 10 (Sony Fix)<span class="pl-pds">"</span></span> {
-    search --fs-uuid --no-floppy --set=root CCC0-5002
+    insmod part_gpt
+    insmod fat
+    search --no-floppy --fs-uuid --set=root CCC0-5002
     chainloader /efi/Microsoft/Boot/win10.efi
 }</pre></div>
 </li>

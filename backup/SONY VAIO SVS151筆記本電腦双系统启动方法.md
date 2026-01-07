@@ -60,11 +60,12 @@
 
     ```bash
     menuentry "Windows 10 (Sony Fix)" {
-        search --fs-uuid --no-floppy --set=root CCC0-5002
+        insmod part_gpt
+        insmod fat
+        search --no-floppy --fs-uuid --set=root CCC0-5002
         chainloader /efi/Microsoft/Boot/win10.efi
     }
     ```
-
 4.  保存退出 (Ctrl+O, Enter, Ctrl+X)。
 5.  更新 GRUB：
     ```bash
