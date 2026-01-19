@@ -5,9 +5,9 @@
 
 操作方法： 在备份前，运行以下命令，把信息写入一个叫 disk_layout.txt 的文件：
 
-Bash
 
-# 1. 记录分区结构 (fdisk -l)
+Bash
+```# 1. 记录分区结构 (fdisk -l)
 echo "=== 分区表结构 ===" > disk_layout.txt
 sudo fdisk -l /dev/sda >> disk_layout.txt
 
@@ -22,6 +22,7 @@ df -hT >> disk_layout.txt
 # 4. 备份 fstab 文件内容
 echo -e "\n=== /etc/fstab 内容 ===" >> disk_layout.txt
 cat /etc/fstab >> disk_layout.txt
+```
 
 恢复时的用法： 恢复时用 cat disk_layout.txt 查看。
 
@@ -52,6 +53,7 @@ cat /etc/fstab >> disk_layout.txt
 
 Bash
 
+```
 #!/bin/bash
 
 # 1. 定义变量
@@ -99,6 +101,7 @@ echo "备份完成！"
 echo "文件位置: $BACKUP_DIR/$FILENAME"
 echo "文件大小: $(ls -lh $BACKUP_DIR/$FILENAME | awk '{print $5}')"
 echo "=========================================="
+```
 
 这个脚本做了什么优化？
 排除 /var/lib/docker/overlay2：
@@ -131,7 +134,8 @@ Root (为了存数据)
 
 Bash
 
-cfdisk /dev/sda
+`cfdisk /dev/sda`
+
 选择分区表类型： 屏幕会问你选什么 Label Type。
 
 选中 gpt，回车。
@@ -164,6 +168,7 @@ Size：默认全部剩余空间 -> 回车。
 
 Bash
 
+```
 # 1. 格式化 EFI 分区 (sda2) 为 FAT32
 mkfs.vfat -F32 /dev/sda2
 
@@ -171,6 +176,7 @@ mkfs.vfat -F32 /dev/sda2
 mkfs.ext4 /dev/sda3
 
 # 注意：sda1 是 BIOS boot，不需要格式化，留着就行。
+```
 第三步：挂载 (Mounting)
 这是最后一步，把这些分区“插”到当前的系统目录里，这样你才能往里面写东西。
 
@@ -178,6 +184,7 @@ mkfs.ext4 /dev/sda3
 
 Bash
 
+```
 # 1. 把最大的根分区挂载到 /mnt
 mount /dev/sda3 /mnt
 
@@ -187,22 +194,26 @@ mkdir -p /mnt/boot/efi
 # 3. 把 EFI 分区挂上去
 mount /dev/sda2 /mnt/boot/efi
 
+```
 下载并解压备份：
 
 Bash
 
+```
 # 在虚拟机里输入
 cd /mnt
 scp root@192.168.xx.xx:/mnt/disk_zhaoyang/006_software/001_os_images/nas_3865u/backup_nas_3865u_xxxx.tar.gz .
+```
 (注意命令最后有个点 .，代表当前目录)
 
 # 解压 (这一步会很久)
-tar -xvpzf backup_nas_3865u_xxxx.tar.gz -C /mnt/
+`tar -xvpzf backup_nas_3865u_xxxx.tar.gz -C /mnt/`
 
 为了防止遗漏，我在下面写了一段完整的补全代码。请在虚拟机里（确保硬盘还挂在 /mnt）运行：
 
 Bash
 
+```
 echo "开始补全目录结构..."
 
 # 1. 系统基础目录
@@ -221,6 +232,7 @@ mkdir -p /mnt/DATA/rclone_mount
 
 echo "目录补全完成！"
 
+```
 解压完还没结束，必须修改配置，否则开不了机。
 
 修改 /mnt/etc/fstab：
@@ -233,6 +245,7 @@ echo "目录补全完成！"
 
 Bash
 
+```
 # 挂载虚拟系统
 for i in /dev /dev/pts /proc /sys /run; do mount -B $i /mnt$i; done
 
@@ -245,24 +258,28 @@ update-grub
 
 # 退出
 exit
+```
 
 第一步：修改 Netplan 配置文件
 找到配置文件： 输入以下命令，查看文件名（通常叫 armbian-default.yaml 或 01-netcfg.yaml）：
 
 Bash
+```
 
 ls /etc/netplan/
 编辑它： 假设文件名是 armbian-default.yaml：
+```
 
 Bash
 
-nano /etc/netplan/armbian-default.yaml
+`nano /etc/netplan/armbian-default.yaml`
 关键修改（请仔细看）： 你现在的配置文件里写的肯定是旧网卡名（比如 eth0 或 enp3s0）和静态 IP。 你需要把网卡名改成现在的 enp0s5，并开启 DHCP。
 
 修改前（你可能看到的）：
 
 YAML
 
+```
 network:
   version: 2
   renderer: NetworkManager
@@ -276,10 +293,12 @@ network:
           via: 192.168.1.1
       nameservers:
         addresses: [8.8.8.8]
+```
 修改后（改成这样）： 注意：YAML 格式非常严格，缩进必须用空格，不能用 Tab！
 
 YAML
 
+```
 network:
   version: 2
   renderer: NetworkManager
@@ -287,6 +306,7 @@ network:
     enp0s5:             <--- 改成现在的新网卡名
       dhcp4: true       <--- 改成 true (自动获取)
       # 下面的 addresses, routes 等全都可以删掉或注释掉
+```
 保存：Ctrl+O, Enter, Ctrl+X。
 
 第二步：应用配置
@@ -294,7 +314,8 @@ network:
 
 Bash
 
-netplan apply
+`netplan apply`
+
 如果报错提示权限太高（permissions are too open），不用管，通常也会生效。
 如果报错 YAML 格式错误，请检查缩进。
 
@@ -311,6 +332,7 @@ netplan apply
 
 Bash
 
+```
 # 1. 强制停止并删除所有容器
 # (如果有报错提示"requires at least 1 argument"说明本来就没容器，忽略即可)
 docker stop $(docker ps -aq) 2>/dev/null
@@ -322,6 +344,7 @@ docker rmi -f $(docker images -q)
 
 # 3. 清理残留网络和缓存
 docker system prune -a -f
+```
 运行完后，再次输入 docker ps -a 和 docker images，应该看到列表是全空的。
 
 第一步：配置 Docker Hub 镜像 (hub.rat.dev)
@@ -331,28 +354,34 @@ docker system prune -a -f
 
 Bash
 
+```
 sudo mkdir -p /etc/docker
 sudo vim /etc/docker/daemon.json
+```
 写入以下内容： 如果文件是空的，直接复制粘贴；如果已有内容，请小心添加到现有 JSON 结构中。
 
 JSON
 
+```
 {
   "registry-mirrors": [
     "https://hub.rat.dev"
   ]
 }
+```
 (注意：hub.rat.dev 是第三方搭建的代理，稳定性可能不如大厂镜像，建议作为备选或在无法访问时使用。)
 
 重载配置并重启 Docker：
 
 Bash
 
+```
 sudo systemctl daemon-reload
 sudo systemctl restart docker
+```
 验证是否生效： 输入 docker info，查看输出底部的 "Registry Mirrors" 字段：
 
 Bash
 
-docker info
+`docker info`
 如果看到 https://hub.rat.dev/，说明配置成功。
