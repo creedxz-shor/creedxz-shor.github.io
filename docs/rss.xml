@@ -1,5 +1,37 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<rss xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" version="2.0"><channel><title>I_Explorer的部落格</title><link>http://blog.832588.xyz</link><description>The only hope you have is to accept the fact that you're already dead, and the sooner you accept that, the sooner you'll be able to function as a soldier's supposed to function. Without mercy, without compassion, without remorse. All war depends on it.</description><copyright>I_Explorer的部落格</copyright><docs>http://www.rssboard.org/rss-specification</docs><generator>python-feedgen</generator><image><url>https://avatars.githubusercontent.com/u/187481172?s=400&amp;u=fd784b652a5f3243acbdb266b9f7685f60813ea2&amp;v=4</url><title>avatar</title><link>http://blog.832588.xyz</link></image><lastBuildDate>Mon, 19 Jan 2026 13:04:21 +0000</lastBuildDate><managingEditor>I_Explorer的部落格</managingEditor><ttl>60</ttl><webMaster>I_Explorer的部落格</webMaster><item><title>NAS的备份与恢复</title><link>http://blog.832588.xyz/post/NAS-de-bei-fen-yu-hui-fu.html</link><description>一、备份：
+<rss xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" version="2.0"><channel><title>I_Explorer的部落格</title><link>http://blog.832588.xyz</link><description>The only hope you have is to accept the fact that you're already dead, and the sooner you accept that, the sooner you'll be able to function as a soldier's supposed to function. Without mercy, without compassion, without remorse. All war depends on it.</description><copyright>I_Explorer的部落格</copyright><docs>http://www.rssboard.org/rss-specification</docs><generator>python-feedgen</generator><image><url>https://avatars.githubusercontent.com/u/187481172?s=400&amp;u=fd784b652a5f3243acbdb266b9f7685f60813ea2&amp;v=4</url><title>avatar</title><link>http://blog.832588.xyz</link></image><lastBuildDate>Tue, 20 Jan 2026 09:35:23 +0000</lastBuildDate><managingEditor>I_Explorer的部落格</managingEditor><ttl>60</ttl><webMaster>I_Explorer的部落格</webMaster><item><title>HTPC的備份與恢復</title><link>http://blog.832588.xyz/post/HTPC-de-bei-fen-yu-hui-fu.html</link><description>備份：
+
+分區信息
+&gt; /mnt/disk_zhaoyang/006_software/001_os_images/Digi002_Debian_Backup_20251228/disk_layout.txt
+
+```
+# 1. 切换 Root (你已经做了)
+# sudo -I
+
+# 2. 创建目录
+mkdir -p /backup_temp
+
+# 3. 定义变量 (注意：路径末尾不带斜杠)
+BACKUP_DIR='/backup_temp'
+DATE=$(date +%Y%m%d)
+
+# 4. 执行备份
+# 注意 --exclude 的顺序和写法
+tar -cvpzf $BACKUP_DIR/desktop_debian13_backup_$DATE.tar.gz \
+--exclude=$BACKUP_DIR \
+--exclude=/proc --exclude=/sys --exclude=/dev --exclude=/run --exclude=/tmp \
+--exclude=/mnt --exclude=/media \
+--exclude=/lost+found \
+--exclude=/home/creedxz/Alist \
+--exclude=/home/creedxz/.cache \
+--exclude=/home/creedxz/.local/share/Trash \
+/
+```
+
+恢復：
+启动进入 Live 系统：
+
+启动虚拟机，进入 Live 桌面或命令行。</description><guid isPermaLink="true">http://blog.832588.xyz/post/HTPC-de-bei-fen-yu-hui-fu.html</guid><pubDate>Tue, 20 Jan 2026 09:34:58 +0000</pubDate></item><item><title>NAS的备份与恢复</title><link>http://blog.832588.xyz/post/NAS-de-bei-fen-yu-hui-fu.html</link><description>一、备份：
 
 层级一：纯文本记录（给人看）
 这个方法是为了让你在恢复时，打开文件看一眼，知道该怎么手动分区。</description><guid isPermaLink="true">http://blog.832588.xyz/post/NAS-de-bei-fen-yu-hui-fu.html</guid><pubDate>Mon, 19 Jan 2026 13:03:55 +0000</pubDate></item><item><title>SONY VAIO SVS151筆記本電腦双系统启动方法</title><link>http://blog.832588.xyz/post/SONY%20VAIO%20SVS151-bi-ji-ben-dian-nao-shuang-xi-tong-qi-dong-fang-fa.html</link><description>把\ESP\EFI\Microsoft\Boot\下的bootmgfw.efi替换成\ESP\EFI\debian的shimx64.efi才能进grub，如果想用win10就再换回来。</description><guid isPermaLink="true">http://blog.832588.xyz/post/SONY%20VAIO%20SVS151-bi-ji-ben-dian-nao-shuang-xi-tong-qi-dong-fang-fa.html</guid><pubDate>Wed, 07 Jan 2026 08:55:52 +0000</pubDate></item><item><title>Digi002_Debian_Backup_20251228</title><link>http://blog.832588.xyz/post/Digi002_Debian_Backup_20251228.html</link><description>文件位於win-nas盤（USB插頭標識ZY）
