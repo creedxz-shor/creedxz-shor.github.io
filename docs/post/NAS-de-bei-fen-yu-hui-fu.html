@@ -382,7 +382,31 @@ sudo systemctl restart docker
 <p>验证是否生效： 输入 docker info，查看输出底部的 "Registry Mirrors" 字段：</p>
 <p>Bash</p>
 <p><code class="notranslate">docker info</code><br>
-如果看到 <a href="https://hub.rat.dev/%EF%BC%8C%E8%AF%B4%E6%98%8E%E9%85%8D%E7%BD%AE%E6%88%90%E5%8A%9F%E3%80%82" rel="nofollow">https://hub.rat.dev/，说明配置成功。</a></p></div>
+如果看到 <a href="https://hub.rat.dev/%EF%BC%8C%E8%AF%B4%E6%98%8E%E9%85%8D%E7%BD%AE%E6%88%90%E5%8A%9F%E3%80%82" rel="nofollow">https://hub.rat.dev/，说明配置成功。</a></p>
+<hr>
+<p>备份之后的更新：<br>
+一、解决 Docker 启动报错（必须配置）</p>
+<p>你提到的 Docker 问题（Nginx 没跑起来、Calibre 没库）是因为你用了 nofail。 逻辑悖论： nofail 告诉系统“硬盘没挂载好也别管，继续开机”，于是系统就继续启动 Docker 了，但此时硬盘还没挂载上，Docker 自然就报错了。</p>
+<p>你需要告诉 Docker：“虽然系统不因硬盘而停，但 Docker 你必须等硬盘。”</p>
+<p>编辑 Docker 服务配置：<br>
+Bash</p>
+<p><code class="notranslate">sudo systemctl edit docker</code><br>
+粘贴以下内容（强制依赖挂载点）： 注意：systemd 会把挂载路径中的 / 转换为 -。<br>
+ini</p>
+<pre class="notranslate"><code class="notranslate">
+[Unit]
+# 只有当这两块盘都挂载成功后，Docker 服务才会启动
+Requires=mnt-disk_zhaoyang.mount mnt-disk_sony.mount
+After=mnt-disk_zhaoyang.mount mnt-disk_sony.mount
+</code></pre>
+<p>生效配置：<br>
+Bash</p>
+<p><code class="notranslate">sudo systemctl daemon-reload</code><br>
+做完这一步，哪怕 USB 硬盘识别慢了 20 秒，Docker 也会乖乖等 20 秒再启动，彻底根治重启容器才能恢复的问题。</p>
+<p>二、“安全关机脚本”更新V7</p>
+<blockquote>
+<p>/mnt/disk_zhaoyang/006_software/001_os_images/nas_3865u/bye_disks_noplug.sh</p>
+</blockquote></div>
 <div style="font-size:small;margin-top:8px;float:right;"></div>
 
 <button class="btn btn-block" type="button" onclick="openComments()" id="cmButton">评论</button>

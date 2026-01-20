@@ -385,3 +385,34 @@ Bash
 
 `docker info`
 如果看到 https://hub.rat.dev/，说明配置成功。
+
+--------------
+备份之后的更新：
+一、解决 Docker 启动报错（必须配置）
+
+你提到的 Docker 问题（Nginx 没跑起来、Calibre 没库）是因为你用了 nofail。 逻辑悖论： nofail 告诉系统“硬盘没挂载好也别管，继续开机”，于是系统就继续启动 Docker 了，但此时硬盘还没挂载上，Docker 自然就报错了。
+
+你需要告诉 Docker：“虽然系统不因硬盘而停，但 Docker 你必须等硬盘。”
+
+编辑 Docker 服务配置：
+Bash
+
+`sudo systemctl edit docker`
+粘贴以下内容（强制依赖挂载点）： 注意：systemd 会把挂载路径中的 / 转换为 -。
+ini
+```
+
+[Unit]
+# 只有当这两块盘都挂载成功后，Docker 服务才会启动
+Requires=mnt-disk_zhaoyang.mount mnt-disk_sony.mount
+After=mnt-disk_zhaoyang.mount mnt-disk_sony.mount
+```
+生效配置：
+Bash
+
+`sudo systemctl daemon-reload`
+做完这一步，哪怕 USB 硬盘识别慢了 20 秒，Docker 也会乖乖等 20 秒再启动，彻底根治重启容器才能恢复的问题。
+
+二、“安全关机脚本”更新V7
+
+> /mnt/disk_zhaoyang/006_software/001_os_images/nas_3865u/bye_disks_noplug.sh
