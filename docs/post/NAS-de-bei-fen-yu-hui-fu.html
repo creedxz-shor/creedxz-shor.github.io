@@ -23,7 +23,7 @@
 <meta property="og:url" content="http://blog.832588.xyz/post/NAS-de-bei-fen-yu-hui-fu.html">
 <meta property="og:image" content="https://avatars.githubusercontent.com/u/187481172?s=400&u=fd784b652a5f3243acbdb266b9f7685f60813ea2&v=4">
 <title>NAS的备份与恢复</title>
-
+<link href="//unpkg.com/@wooorm/starry-night@2.1.1/style/both.css" rel="stylesheet" />
 
 
 </head>
@@ -454,7 +454,294 @@ docker-compose up -d tv-backend
 <p><code class="notranslate">docker logs --tail 20 tv-backend</code><br>
 成功的标志：</p>
 <p>以前的日志： 会显示 Watching for file changes with StatReloader。<br>
-现在的日志： 这句话消失了。只会显示 Starting development server at ...。</p></div>
+现在的日志： 这句话消失了。只会显示 Starting development server at ...。</p>
+<p>四、关闭fireflyiii、immich、vault warden的健康度检查</p>
+<p>没问题，完全可以！</p>
+<p>如果你的需求是**“只要它跑着就行，挂了等我发现了再手动处理，或者等它自己慢慢反应”**，那么设置为 3 小时一次是极好的省资源策略。</p>
+<p>这样 Docker 一天只会读取硬盘检查它 8 次，对 SSD 的磨损几乎为零。</p>
+<p>请直接使用下面的配置覆盖你原来的 <code class="notranslate">app</code> 和 <code class="notranslate">db</code> 部分：</p>
+<div class="highlight highlight-source-yaml"><pre class="notranslate"><span class="pl-ent">services</span>:
+  <span class="pl-ent">app</span>:
+    <span class="pl-ent">image</span>: <span class="pl-s">fireflyiii/core:latest</span>
+    <span class="pl-ent">hostname</span>: <span class="pl-s">app</span>
+    <span class="pl-ent">container_name</span>: <span class="pl-s">firefly_iii_core</span>
+    <span class="pl-ent">restart</span>: <span class="pl-s">always</span>
+    <span class="pl-ent">volumes</span>:
+      - <span class="pl-s">firefly_iii_upload:/var/www/html/storage/upload</span>
+    <span class="pl-ent">env_file</span>: <span class="pl-s">.env</span>
+    <span class="pl-ent">networks</span>:
+      - <span class="pl-s">firefly_iii</span>
+    <span class="pl-ent">ports</span>:
+      - <span class="pl-c1">8011:8080</span>
+    <span class="pl-ent">depends_on</span>:
+      - <span class="pl-s">db</span>
+    <span class="pl-c"><span class="pl-c">#</span> --- 修改部分：极低频健康检查 ---</span>
+    <span class="pl-ent">healthcheck</span>:
+      <span class="pl-ent">test</span>: <span class="pl-s">["CMD", "curl", "-f", "http://localhost:8080/api/v1/health"]</span>
+      <span class="pl-ent">interval</span>: <span class="pl-c1">3h</span>        <span class="pl-c"><span class="pl-c">#</span> 改为每 3 小时检查一次</span>
+      <span class="pl-ent">timeout</span>: <span class="pl-c1">10s</span>
+      <span class="pl-ent">retries</span>: <span class="pl-c1">3</span>
+      <span class="pl-ent">start_period</span>: <span class="pl-c1">30s</span>
+    <span class="pl-c"><span class="pl-c">#</span> -----------------------------</span>
+
+  <span class="pl-ent">db</span>:
+    <span class="pl-ent">image</span>: <span class="pl-s">mariadb:lts</span>
+    <span class="pl-ent">hostname</span>: <span class="pl-s">db</span>
+    <span class="pl-ent">container_name</span>: <span class="pl-s">firefly_iii_db</span>
+    <span class="pl-ent">restart</span>: <span class="pl-s">always</span>
+    <span class="pl-ent">env_file</span>: <span class="pl-s">.db.env</span>
+    <span class="pl-ent">networks</span>:
+      - <span class="pl-s">firefly_iii</span>
+    <span class="pl-ent">volumes</span>:
+      - <span class="pl-s">/DATA/docker_dbdata/firefly/db:/var/lib/mysql</span>
+    <span class="pl-c"><span class="pl-c">#</span> 数据库也建议同步改为 3小时，否则它还会每几秒跳一次</span>
+    <span class="pl-ent">healthcheck</span>:
+      <span class="pl-ent">test</span>: <span class="pl-s">["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]</span>
+      <span class="pl-ent">interval</span>: <span class="pl-c1">3h</span>        <span class="pl-c"><span class="pl-c">#</span> 改为每 3 小时检查一次</span>
+      <span class="pl-ent">timeout</span>: <span class="pl-c1">5s</span>
+      <span class="pl-ent">retries</span>: <span class="pl-c1">3</span>
+
+  <span class="pl-c"><span class="pl-c">#</span> cron 服务部分保持不变...</span>
+  <span class="pl-ent">cron</span>:
+    <span class="pl-ent">image</span>: <span class="pl-s">alpine</span>
+    <span class="pl-ent">restart</span>: <span class="pl-s">always</span>
+    <span class="pl-ent">container_name</span>: <span class="pl-s">firefly_iii_cron</span>
+    <span class="pl-ent">env_file</span>: <span class="pl-s">.env</span>
+    <span class="pl-ent">command</span>: <span class="pl-s">sh -c "</span>
+      <span class="pl-s">apk add tzdata &amp;&amp; \</span>
+      <span class="pl-s">ln -fs /usr/share/zoneinfo/$$TZ /etc/localtime &amp;&amp; \</span>
+      <span class="pl-s">echo \"0 3 * * * wget -qO- http://app:8080/api/v1/cron/$$STATIC_CRON_TOKEN;echo\"</span>
+      <span class="pl-s">| crontab - &amp;&amp; \</span>
+      <span class="pl-s">crond -f -L /dev/stdout"</span>
+    <span class="pl-ent">networks</span>:
+      - <span class="pl-s">firefly_iii</span>
+    <span class="pl-ent">depends_on</span>:
+      - <span class="pl-s">app</span>
+
+<span class="pl-ent">volumes</span>:
+   <span class="pl-ent">firefly_iii_upload</span>:
+   <span class="pl-ent">firefly_iii_db</span>:
+
+<span class="pl-ent">networks</span>:
+  <span class="pl-ent">firefly_iii</span>:
+    <span class="pl-ent">driver</span>: <span class="pl-s">bridge</span></pre></div>
+<h3>修改后的影响（必读）：</h3>
+<ol>
+<li><strong>极度安静</strong>：你的日志和磁盘读取将变得非常干净。</li>
+<li><strong>副作用</strong>：如果 Firefly 在你刚做完检查后的第 1 分钟崩溃了，Docker <strong>在接下来的 2小时59分钟内</strong> 都不会发现它挂了，也就不会去重启它。服务会在这段时间内不可用。
+<ul>
+<li><em>对于个人记账来说，这完全可以接受。</em></li>
+</ul>
+</li>
+</ol>
+<h3>如何生效：</h3>
+<p>保存文件后执行：</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">docker compose up -d</pre></div>
+<p>这里有两种方法来验证：一种是“查户口”（看配置是否生效），另一种是“看疗效”（看日志是否安静了）。</p>
+<h3>方法一：最直观的方法——看“安静了没”</h3>
+<p>你之前运行那个 <code class="notranslate">docker events</code> 命令时，屏幕是疯狂滚动的。现在请再次运行同样的命令：</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">docker events --filter <span class="pl-s"><span class="pl-pds">'</span>event=exec_create<span class="pl-pds">'</span></span></pre></div>
+<p><strong>判断标准：</strong></p>
+<ul>
+<li><strong>以前</strong>：大概每 5 秒钟就会跳出一行 <code class="notranslate">exec_create ... curl ...</code>。</li>
+<li><strong>现在</strong>：运行后，<strong>盯着屏幕看 30 秒甚至 1 分钟，应该一行字都不会跳出来</strong>。
+<ul>
+<li>如果有内容跳出来，但不是 Firefly 的，说明生效了。</li>
+<li>如果完全没有任何输出，说明世界清静了。</li>
+</ul>
+</li>
+</ul>
+<p><em>(按 <code class="notranslate">Ctrl + C</code> 退出)</em></p>
+<hr>
+<h3>方法二：最精准的方法——查 Docker 内部配置</h3>
+<p>直接查看容器的元数据，看看 Docker 到底把间隔设为了多少。</p>
+<p>运行这条命令：</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">docker inspect firefly_iii_core --format <span class="pl-s"><span class="pl-pds">'</span>{{json .Config.Healthcheck}}<span class="pl-pds">'</span></span></pre></div>
+<p>或者用这个更易读的命令（如果你没有安装 jq 工具，可能显示会比较乱，建议用上面那个或者 grep）：</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">docker inspect firefly_iii_core <span class="pl-k">|</span> grep -A 5 <span class="pl-s"><span class="pl-pds">"</span>Healthcheck<span class="pl-pds">"</span></span></pre></div>
+<p><strong>判断标准：</strong><br>
+你需要找到 <strong><code class="notranslate">Interval</code></strong> 这一项。</p>
+<ul>
+<li>如果显示 <strong><code class="notranslate">10800000000000</code></strong> (单位是纳秒) 或者 <strong><code class="notranslate">3h0m0s</code></strong>。</li>
+<li><strong>结论</strong>：<strong>设置成功生效！</strong> (3小时 = 10800秒)。</li>
+</ul>
+<p><em>如果显示的还是 <code class="notranslate">30000000000</code> (30秒) 或者 <code class="notranslate">5s</code>，说明配置没更新，请重新运行 <code class="notranslate">docker compose up -d</code>。</em></p>
+<hr>
+<h3>方法三：看容器状态</h3>
+<div class="highlight highlight-source-shell"><pre class="notranslate">docker ps</pre></div>
+<p><strong>判断标准：</strong><br>
+查看 <code class="notranslate">firefly_iii_core</code> 的 <code class="notranslate">STATUS</code> 一栏。</p>
+<ul>
+<li>刚启动时可能显示 <code class="notranslate">Up x minutes (health: starting)</code>。</li>
+<li>过一会应该显示 <code class="notranslate">Up x minutes (healthy)</code>。</li>
+<li>只要它没有变成 <code class="notranslate">Restarting</code>，且上述方法一验证安静了，那就是完美的。</li>
+</ul>
+<p><strong>可以直接关掉！</strong></p>
+<p>对于家用服务器，尤其是你自己就是唯一的管理员，出了问题你能手动重启，那么完全可以关掉健康检查来换取“绝对的硬盘宁静”。</p>
+<p>这里提供两个方案，任你选择：</p>
+<hr>
+<h3>方案一：简单粗暴 - 彻底关闭 (推荐给强迫症)</h3>
+<p>修改你的 <code class="notranslate">docker-compose.yml</code>，在 <code class="notranslate">immich-server</code>, <code class="notranslate">redis</code>, <code class="notranslate">database</code> 下面都加上禁用指令。</p>
+<p><strong>注意：</strong></p>
+<ol>
+<li><strong>Server</strong>: 将原来的 <code class="notranslate">disable: false</code> 改为 <code class="notranslate">disable: true</code>。</li>
+<li><strong>Redis</strong>: 这是一个独立的块，直接修改。</li>
+<li><strong>Database</strong>: 原文件中没有写 healthcheck，说明它用了镜像默认的。我们需要显式添加一段来禁用它。</li>
+</ol>
+<div class="highlight highlight-source-yaml"><pre class="notranslate"><span class="pl-ent">services</span>:
+  <span class="pl-ent">immich-server</span>:
+    <span class="pl-c"><span class="pl-c">#</span> ... 其他配置保持不变 ...</span>
+    <span class="pl-ent">restart</span>: <span class="pl-s">always</span>
+    <span class="pl-ent">healthcheck</span>:
+      <span class="pl-ent">disable</span>: <span class="pl-s">true       </span><span class="pl-c"><span class="pl-c">#</span> &lt;--- 改为 true，彻底关闭检查</span>
+
+  <span class="pl-ent">redis</span>:
+    <span class="pl-ent">container_name</span>: <span class="pl-s">immich_redis</span>
+    <span class="pl-ent">image</span>: <span class="pl-s">docker.io/valkey/valkey:8-bookworm@...</span>
+    <span class="pl-ent">restart</span>: <span class="pl-s">always</span>
+    <span class="pl-c"><span class="pl-c">#</span> 直接禁用</span>
+    <span class="pl-ent">healthcheck</span>:
+      <span class="pl-ent">disable</span>: <span class="pl-s">true       </span><span class="pl-c"><span class="pl-c">#</span> &lt;--- 添加这行</span>
+
+  <span class="pl-ent">database</span>:
+    <span class="pl-ent">container_name</span>: <span class="pl-s">immich_postgres</span>
+    <span class="pl-c"><span class="pl-c">#</span> ... 其他配置保持不变 ...</span>
+    <span class="pl-ent">restart</span>: <span class="pl-s">always</span>
+    <span class="pl-c"><span class="pl-c">#</span> 数据库原本没写，加上这个来禁用默认检查</span>
+    <span class="pl-ent">healthcheck</span>:
+      <span class="pl-ent">disable</span>: <span class="pl-s">true       </span><span class="pl-c"><span class="pl-c">#</span> &lt;--- 添加这行</span></pre></div>
+<p><strong>生效方法：</strong></p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">docker compose up -d</pre></div>
+<p><strong>后果：</strong></p>
+<ul>
+<li><strong>优点</strong>：Docker 再也不会去读硬盘检查它们了，绝对零 IO。</li>
+<li><strong>缺点</strong>：如果 Immich 卡死了（网页打不开但在后台进程还在），Docker 不会自动重启它，你需要手动发现并重启。</li>
+</ul>
+<hr>
+<h3>方案二：折中方案 - 3小时检查一次 (推荐给求稳派)</h3>
+<p>如果你担心万一数据库死锁了没人管，可以改为 3 小时一次。</p>
+<div class="highlight highlight-source-yaml"><pre class="notranslate"><span class="pl-ent">services</span>:
+  <span class="pl-ent">immich-server</span>:
+    <span class="pl-c"><span class="pl-c">#</span> ...</span>
+    <span class="pl-ent">healthcheck</span>:
+      <span class="pl-c"><span class="pl-c">#</span> Immich 官方镜像自带的检查命令</span>
+      <span class="pl-ent">test</span>: <span class="pl-s">["CMD", "immich-healthcheck"]</span>
+      <span class="pl-ent">interval</span>: <span class="pl-c1">3h</span>
+      <span class="pl-ent">timeout</span>: <span class="pl-c1">10s</span>
+      <span class="pl-ent">retries</span>: <span class="pl-c1">3</span>
+
+  <span class="pl-ent">redis</span>:
+    <span class="pl-c"><span class="pl-c">#</span> ...</span>
+    <span class="pl-ent">healthcheck</span>:
+      <span class="pl-ent">test</span>: <span class="pl-s">["CMD-SHELL", "redis-cli ping || exit 1"]</span>
+      <span class="pl-ent">interval</span>: <span class="pl-c1">3h</span>
+      <span class="pl-ent">timeout</span>: <span class="pl-c1">5s</span>
+      <span class="pl-ent">retries</span>: <span class="pl-c1">3</span>
+      
+  <span class="pl-ent">database</span>:
+    <span class="pl-c"><span class="pl-c">#</span> ...</span>
+    <span class="pl-ent">healthcheck</span>:
+      <span class="pl-c"><span class="pl-c">#</span> Postgres 标准检查命令</span>
+      <span class="pl-ent">test</span>: <span class="pl-s">["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE_NAME}"]</span>
+      <span class="pl-ent">interval</span>: <span class="pl-c1">3h</span>
+      <span class="pl-ent">timeout</span>: <span class="pl-c1">5s</span>
+      <span class="pl-ent">retries</span>: <span class="pl-c1">3</span></pre></div>
+<h3>总结建议</h3>
+<p>既然你已经解决了主要矛盾（Django 和 Firefly），对于 Immich 这种重型应用：</p>
+<ul>
+<li>如果你追求 <strong>极致的零读写</strong>：选 <strong>方案一（彻底关闭）</strong>。Immich 很成熟，不容易无缘无故卡死。</li>
+<li>如果你希望 <strong>有一点兜底</strong>：选 <strong>方案二</strong>。一天只读 8 次盘，对 SSD 寿命没有任何影响。</li>
+</ul>
+<p>CasaOS 本质上是一个可视化的 Docker 管理面板。对于通过 CasaOS 应用商店（App Store）或者手动安装的应用，你有两种方法来修改配置。</p>
+<p>这里教你最简单、最稳妥的方法：<strong>直接在 CasaOS 的界面上修改（如果支持）</strong> 或者 <strong>通过命令行修改底层的 compose 文件</strong>。</p>
+<p>鉴于 CasaOS 的界面可能无法直接修改高级的 <code class="notranslate">healthcheck</code> 参数，最有效的方法是<strong>导出配置 -&gt; 修改 -&gt; 重新导入/更新</strong>。</p>
+<h3>方法一：通过 CasaOS 网页界面修改（最简单，但不一定所有版本都支持）</h3>
+<ol>
+<li>打开 CasaOS 仪表盘。</li>
+<li>找到 <strong>Vaultwarden</strong> 应用图标。</li>
+<li>点击图标右上角的三个点 <code class="notranslate">...</code> -&gt; <strong>设置 (Settings)</strong>。</li>
+<li>在弹出的窗口顶部，看看有没有 <strong>"Export Docker Compose"</strong> (导出 Docker Compose) 或者类似的按钮/选项。
+<ul>
+<li>如果有，点击它查看当前的 YAML 配置。</li>
+<li>在配置里添加或修改 <code class="notranslate">healthcheck</code> 部分（代码见下文）。</li>
+<li>保存并应用。</li>
+</ul>
+</li>
+</ol>
+<p><em>注意：很多版本的 CasaOS 设置界面只允许改端口和挂载卷，不支持直接加 healthcheck 代码。如果不行，请用方法二。</em></p>
+<h3>方法二：通过命令行“手术刀”式修改（推荐，精准有效）</h3>
+<p>CasaOS 安装的应用其实都对应着一个 <code class="notranslate">docker-compose.yml</code> 文件。我们需要找到这个文件，修改它，然后让 Docker 重新加载。</p>
+<p><strong>步骤如下：</strong></p>
+<ol>
+<li>
+<p><strong>找到配置文件路径</strong><br>
+CasaOS 的应用配置通常存储在 <code class="notranslate">/var/lib/casaos/apps/</code> 目录下。Vaultwarden 应该在这个目录下有一个对应的文件夹。</p>
+<p>打开 SSH 终端，输入：</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">find /var/lib/casaos/apps -name <span class="pl-s"><span class="pl-pds">"</span>docker-compose.yml<span class="pl-pds">"</span></span> <span class="pl-k">|</span> grep vaultwarden</pre></div>
+<p>你应该会看到类似 <code class="notranslate">/var/lib/casaos/apps/vaultwarden/docker-compose.yml</code> 的路径。</p>
+</li>
+<li>
+<p><strong>编辑文件</strong><br>
+使用 <code class="notranslate">nano</code> 或 <code class="notranslate">vi</code> 编辑这个文件：</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">nano /var/lib/casaos/apps/vaultwarden/docker-compose.yml</pre></div>
+<p><em>(如果不确定路径，就用你刚才 find 命令查到的那个)</em></p>
+</li>
+<li>
+<p><strong>加入健康检查代码</strong><br>
+找到 <code class="notranslate">services:</code> 下面的 <code class="notranslate">vaultwarden</code> 部分，在 <code class="notranslate">image</code>, <code class="notranslate">volumes</code> 等同级的位置，加入以下代码：</p>
+<div class="highlight highlight-source-yaml"><pre class="notranslate">    <span class="pl-c"><span class="pl-c">#</span> ... 其他原有配置 ...</span>
+    <span class="pl-ent">restart</span>: <span class="pl-s">always </span><span class="pl-c"><span class="pl-c">#</span> 原有配置</span>
+    
+    <span class="pl-c"><span class="pl-c">#</span> --- 添加这部分 ---</span>
+    <span class="pl-ent">healthcheck</span>:
+      <span class="pl-ent">test</span>: <span class="pl-s">["CMD", "/healthcheck.sh"]</span>
+      <span class="pl-ent">interval</span>: <span class="pl-c1">3h</span>        <span class="pl-c"><span class="pl-c">#</span> 改为 3 小时</span>
+      <span class="pl-ent">timeout</span>: <span class="pl-c1">10s</span>
+      <span class="pl-ent">retries</span>: <span class="pl-c1">3</span>
+    <span class="pl-c"><span class="pl-c">#</span> -----------------</span></pre></div>
+<p><em>注意缩进！YAML 文件对缩进非常敏感，必须和上面的 <code class="notranslate">restart</code> 或 <code class="notranslate">image</code> 保持对齐。</em></p>
+</li>
+<li>
+<p><strong>保存退出</strong></p>
+<ul>
+<li>按 <code class="notranslate">Ctrl + O</code> -&gt; <code class="notranslate">Enter</code> (保存)</li>
+<li>按 <code class="notranslate">Ctrl + X</code> (退出)</li>
+</ul>
+</li>
+<li>
+<p><strong>让修改生效</strong><br>
+CasaOS 有个机制，我们可以直接用 <code class="notranslate">docker compose</code> 命令让它生效。</p>
+<p>切换到该目录：</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate"><span class="pl-c1">cd</span> /var/lib/casaos/apps/vaultwarden/</pre></div>
+<p>重新启动应用（Docker 会自动检测配置变化并重建容器）：</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">docker compose up -d</pre></div>
+</li>
+</ol>
+<h3>方法三：如果你在 CasaOS 界面找不到“导出配置”，也不想用命令行</h3>
+<p>你可以直接在 CasaOS 界面上 <strong>卸载 Vaultwarden</strong>，然后选择 <strong>“自定义安装 (Custom Install)”</strong>。</p>
+<ol>
+<li>在自定义安装界面，点击右上角的 <strong>“Import” (导入)</strong>。</li>
+<li>输入下面的配置（这是 Vaultwarden 的标准配置 + 3小时健康检查）：
+<div class="highlight highlight-source-yaml"><pre class="notranslate"><span class="pl-ent">name</span>: <span class="pl-s">vaultwarden</span>
+<span class="pl-ent">services</span>:
+  <span class="pl-ent">vaultwarden</span>:
+    <span class="pl-ent">image</span>: <span class="pl-s">vaultwarden/server:latest</span>
+    <span class="pl-ent">container_name</span>: <span class="pl-s">vaultwarden</span>
+    <span class="pl-ent">restart</span>: <span class="pl-s">always</span>
+    <span class="pl-ent">volumes</span>:
+      - <span class="pl-s">/DATA/AppData/vaultwarden:/data  </span><span class="pl-c"><span class="pl-c">#</span> 注意：这里要改成你原本的数据路径！</span>
+    <span class="pl-ent">ports</span>:
+      - <span class="pl-c1">80:80</span>  <span class="pl-c"><span class="pl-c">#</span> 注意：改成你原本用的端口</span>
+    <span class="pl-ent">healthcheck</span>:
+      <span class="pl-ent">test</span>: <span class="pl-s">["CMD", "/healthcheck.sh"]</span>
+      <span class="pl-ent">interval</span>: <span class="pl-c1">3h</span>
+      <span class="pl-ent">timeout</span>: <span class="pl-c1">10s</span>
+      <span class="pl-ent">retries</span>: <span class="pl-c1">3</span></pre></div>
+</li>
+<li><strong>关键点</strong>：一定要确保 <code class="notranslate">volumes</code> 里的路径是你之前用的路径，这样数据才不会丢。</li>
+</ol>
+<h3>总结</h3>
+<p>推荐使用 <strong>方法二（命令行修改）</strong>。它是最安全且无损的，只需修改一个文件，执行一条命令，立马生效，不需要担心数据路径配错的问题。</p></div>
 <div style="font-size:small;margin-top:8px;float:right;"></div>
 
 <button class="btn btn-block" type="button" onclick="openComments()" id="cmButton">评论</button>

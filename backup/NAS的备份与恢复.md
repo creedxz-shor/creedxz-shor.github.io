@@ -475,3 +475,345 @@ Bash
 
 以前的日志： 会显示 Watching for file changes with StatReloader。
 现在的日志： 这句话消失了。只会显示 Starting development server at ...。
+
+四、关闭fireflyiii、immich、vault warden的健康度检查
+
+没问题，完全可以！
+
+如果你的需求是**“只要它跑着就行，挂了等我发现了再手动处理，或者等它自己慢慢反应”**，那么设置为 3 小时一次是极好的省资源策略。
+
+这样 Docker 一天只会读取硬盘检查它 8 次，对 SSD 的磨损几乎为零。
+
+请直接使用下面的配置覆盖你原来的 `app` 和 `db` 部分：
+
+```yaml
+services:
+  app:
+    image: fireflyiii/core:latest
+    hostname: app
+    container_name: firefly_iii_core
+    restart: always
+    volumes:
+      - firefly_iii_upload:/var/www/html/storage/upload
+    env_file: .env
+    networks:
+      - firefly_iii
+    ports:
+      - 8011:8080
+    depends_on:
+      - db
+    # --- 修改部分：极低频健康检查 ---
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/health"]
+      interval: 3h        # 改为每 3 小时检查一次
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    # -----------------------------
+
+  db:
+    image: mariadb:lts
+    hostname: db
+    container_name: firefly_iii_db
+    restart: always
+    env_file: .db.env
+    networks:
+      - firefly_iii
+    volumes:
+      - /DATA/docker_dbdata/firefly/db:/var/lib/mysql
+    # 数据库也建议同步改为 3小时，否则它还会每几秒跳一次
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 3h        # 改为每 3 小时检查一次
+      timeout: 5s
+      retries: 3
+
+  # cron 服务部分保持不变...
+  cron:
+    image: alpine
+    restart: always
+    container_name: firefly_iii_cron
+    env_file: .env
+    command: sh -c "
+      apk add tzdata && \
+      ln -fs /usr/share/zoneinfo/$$TZ /etc/localtime && \
+      echo \"0 3 * * * wget -qO- http://app:8080/api/v1/cron/$$STATIC_CRON_TOKEN;echo\"
+      | crontab - && \
+      crond -f -L /dev/stdout"
+    networks:
+      - firefly_iii
+    depends_on:
+      - app
+
+volumes:
+   firefly_iii_upload:
+   firefly_iii_db:
+
+networks:
+  firefly_iii:
+    driver: bridge
+```
+
+### 修改后的影响（必读）：
+
+1.  **极度安静**：你的日志和磁盘读取将变得非常干净。
+2.  **副作用**：如果 Firefly 在你刚做完检查后的第 1 分钟崩溃了，Docker **在接下来的 2小时59分钟内** 都不会发现它挂了，也就不会去重启它。服务会在这段时间内不可用。
+    *   *对于个人记账来说，这完全可以接受。*
+
+### 如何生效：
+保存文件后执行：
+```bash
+docker compose up -d
+```
+
+这里有两种方法来验证：一种是“查户口”（看配置是否生效），另一种是“看疗效”（看日志是否安静了）。
+
+### 方法一：最直观的方法——看“安静了没”
+
+你之前运行那个 `docker events` 命令时，屏幕是疯狂滚动的。现在请再次运行同样的命令：
+
+```bash
+docker events --filter 'event=exec_create'
+```
+
+**判断标准：**
+*   **以前**：大概每 5 秒钟就会跳出一行 `exec_create ... curl ...`。
+*   **现在**：运行后，**盯着屏幕看 30 秒甚至 1 分钟，应该一行字都不会跳出来**。
+    *   如果有内容跳出来，但不是 Firefly 的，说明生效了。
+    *   如果完全没有任何输出，说明世界清静了。
+
+*(按 `Ctrl + C` 退出)*
+
+---
+
+### 方法二：最精准的方法——查 Docker 内部配置
+
+直接查看容器的元数据，看看 Docker 到底把间隔设为了多少。
+
+运行这条命令：
+
+```bash
+docker inspect firefly_iii_core --format '{{json .Config.Healthcheck}}'
+```
+
+或者用这个更易读的命令（如果你没有安装 jq 工具，可能显示会比较乱，建议用上面那个或者 grep）：
+
+```bash
+docker inspect firefly_iii_core | grep -A 5 "Healthcheck"
+```
+
+**判断标准：**
+你需要找到 **`Interval`** 这一项。
+*   如果显示 **`10800000000000`** (单位是纳秒) 或者 **`3h0m0s`**。
+*   **结论**：**设置成功生效！** (3小时 = 10800秒)。
+
+*如果显示的还是 `30000000000` (30秒) 或者 `5s`，说明配置没更新，请重新运行 `docker compose up -d`。*
+
+---
+
+### 方法三：看容器状态
+
+```bash
+docker ps
+```
+
+**判断标准：**
+查看 `firefly_iii_core` 的 `STATUS` 一栏。
+*   刚启动时可能显示 `Up x minutes (health: starting)`。
+*   过一会应该显示 `Up x minutes (healthy)`。
+*   只要它没有变成 `Restarting`，且上述方法一验证安静了，那就是完美的。
+
+**可以直接关掉！**
+
+对于家用服务器，尤其是你自己就是唯一的管理员，出了问题你能手动重启，那么完全可以关掉健康检查来换取“绝对的硬盘宁静”。
+
+这里提供两个方案，任你选择：
+
+---
+
+### 方案一：简单粗暴 - 彻底关闭 (推荐给强迫症)
+
+修改你的 `docker-compose.yml`，在 `immich-server`, `redis`, `database` 下面都加上禁用指令。
+
+**注意：**
+1.  **Server**: 将原来的 `disable: false` 改为 `disable: true`。
+2.  **Redis**: 这是一个独立的块，直接修改。
+3.  **Database**: 原文件中没有写 healthcheck，说明它用了镜像默认的。我们需要显式添加一段来禁用它。
+
+```yaml
+services:
+  immich-server:
+    # ... 其他配置保持不变 ...
+    restart: always
+    healthcheck:
+      disable: true       # <--- 改为 true，彻底关闭检查
+
+  redis:
+    container_name: immich_redis
+    image: docker.io/valkey/valkey:8-bookworm@...
+    restart: always
+    # 直接禁用
+    healthcheck:
+      disable: true       # <--- 添加这行
+
+  database:
+    container_name: immich_postgres
+    # ... 其他配置保持不变 ...
+    restart: always
+    # 数据库原本没写，加上这个来禁用默认检查
+    healthcheck:
+      disable: true       # <--- 添加这行
+```
+
+**生效方法：**
+```bash
+docker compose up -d
+```
+
+**后果：**
+*   **优点**：Docker 再也不会去读硬盘检查它们了，绝对零 IO。
+*   **缺点**：如果 Immich 卡死了（网页打不开但在后台进程还在），Docker 不会自动重启它，你需要手动发现并重启。
+
+---
+
+### 方案二：折中方案 - 3小时检查一次 (推荐给求稳派)
+
+如果你担心万一数据库死锁了没人管，可以改为 3 小时一次。
+
+```yaml
+services:
+  immich-server:
+    # ...
+    healthcheck:
+      # Immich 官方镜像自带的检查命令
+      test: ["CMD", "immich-healthcheck"]
+      interval: 3h
+      timeout: 10s
+      retries: 3
+
+  redis:
+    # ...
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping || exit 1"]
+      interval: 3h
+      timeout: 5s
+      retries: 3
+      
+  database:
+    # ...
+    healthcheck:
+      # Postgres 标准检查命令
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE_NAME}"]
+      interval: 3h
+      timeout: 5s
+      retries: 3
+```
+
+### 总结建议
+
+既然你已经解决了主要矛盾（Django 和 Firefly），对于 Immich 这种重型应用：
+
+*   如果你追求 **极致的零读写**：选 **方案一（彻底关闭）**。Immich 很成熟，不容易无缘无故卡死。
+*   如果你希望 **有一点兜底**：选 **方案二**。一天只读 8 次盘，对 SSD 寿命没有任何影响。
+
+CasaOS 本质上是一个可视化的 Docker 管理面板。对于通过 CasaOS 应用商店（App Store）或者手动安装的应用，你有两种方法来修改配置。
+
+这里教你最简单、最稳妥的方法：**直接在 CasaOS 的界面上修改（如果支持）** 或者 **通过命令行修改底层的 compose 文件**。
+
+鉴于 CasaOS 的界面可能无法直接修改高级的 `healthcheck` 参数，最有效的方法是**导出配置 -> 修改 -> 重新导入/更新**。
+
+### 方法一：通过 CasaOS 网页界面修改（最简单，但不一定所有版本都支持）
+
+1.  打开 CasaOS 仪表盘。
+2.  找到 **Vaultwarden** 应用图标。
+3.  点击图标右上角的三个点 `...` -> **设置 (Settings)**。
+4.  在弹出的窗口顶部，看看有没有 **"Export Docker Compose"** (导出 Docker Compose) 或者类似的按钮/选项。
+    *   如果有，点击它查看当前的 YAML 配置。
+    *   在配置里添加或修改 `healthcheck` 部分（代码见下文）。
+    *   保存并应用。
+
+*注意：很多版本的 CasaOS 设置界面只允许改端口和挂载卷，不支持直接加 healthcheck 代码。如果不行，请用方法二。*
+
+### 方法二：通过命令行“手术刀”式修改（推荐，精准有效）
+
+CasaOS 安装的应用其实都对应着一个 `docker-compose.yml` 文件。我们需要找到这个文件，修改它，然后让 Docker 重新加载。
+
+**步骤如下：**
+
+1.  **找到配置文件路径**
+    CasaOS 的应用配置通常存储在 `/var/lib/casaos/apps/` 目录下。Vaultwarden 应该在这个目录下有一个对应的文件夹。
+    
+    打开 SSH 终端，输入：
+    ```bash
+    find /var/lib/casaos/apps -name "docker-compose.yml" | grep vaultwarden
+    ```
+    你应该会看到类似 `/var/lib/casaos/apps/vaultwarden/docker-compose.yml` 的路径。
+
+2.  **编辑文件**
+    使用 `nano` 或 `vi` 编辑这个文件：
+    ```bash
+    nano /var/lib/casaos/apps/vaultwarden/docker-compose.yml
+    ```
+    *(如果不确定路径，就用你刚才 find 命令查到的那个)*
+
+3.  **加入健康检查代码**
+    找到 `services:` 下面的 `vaultwarden` 部分，在 `image`, `volumes` 等同级的位置，加入以下代码：
+
+    ```yaml
+        # ... 其他原有配置 ...
+        restart: always # 原有配置
+        
+        # --- 添加这部分 ---
+        healthcheck:
+          test: ["CMD", "/healthcheck.sh"]
+          interval: 3h        # 改为 3 小时
+          timeout: 10s
+          retries: 3
+        # -----------------
+    ```
+    *注意缩进！YAML 文件对缩进非常敏感，必须和上面的 `restart` 或 `image` 保持对齐。*
+
+4.  **保存退出**
+    *   按 `Ctrl + O` -> `Enter` (保存)
+    *   按 `Ctrl + X` (退出)
+
+5.  **让修改生效**
+    CasaOS 有个机制，我们可以直接用 `docker compose` 命令让它生效。
+    
+    切换到该目录：
+    ```bash
+    cd /var/lib/casaos/apps/vaultwarden/
+    ```
+    
+    重新启动应用（Docker 会自动检测配置变化并重建容器）：
+    ```bash
+    docker compose up -d
+    ```
+
+### 方法三：如果你在 CasaOS 界面找不到“导出配置”，也不想用命令行
+
+你可以直接在 CasaOS 界面上 **卸载 Vaultwarden**，然后选择 **“自定义安装 (Custom Install)”**。
+
+1.  在自定义安装界面，点击右上角的 **“Import” (导入)**。
+2.  输入下面的配置（这是 Vaultwarden 的标准配置 + 3小时健康检查）：
+    ```yaml
+    name: vaultwarden
+    services:
+      vaultwarden:
+        image: vaultwarden/server:latest
+        container_name: vaultwarden
+        restart: always
+        volumes:
+          - /DATA/AppData/vaultwarden:/data  # 注意：这里要改成你原本的数据路径！
+        ports:
+          - 80:80  # 注意：改成你原本用的端口
+        healthcheck:
+          test: ["CMD", "/healthcheck.sh"]
+          interval: 3h
+          timeout: 10s
+          retries: 3
+    ```
+3.  **关键点**：一定要确保 `volumes` 里的路径是你之前用的路径，这样数据才不会丢。
+
+### 总结
+推荐使用 **方法二（命令行修改）**。它是最安全且无损的，只需修改一个文件，执行一条命令，立马生效，不需要担心数据路径配错的问题。
