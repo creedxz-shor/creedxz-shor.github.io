@@ -416,3 +416,62 @@ Bash
 二、“安全关机脚本”更新V7
 
 > /mnt/disk_zhaoyang/006_software/001_os_images/nas_3865u/bye_disks_noplug.sh
+
+三、关闭tv-backend的开发模式
+
+找到了根源就好办了！
+
+问题出在 Django 的开发模式。你的 tv-backend 容器目前默认运行的是 python manage.py runserver。 这个模式下，Django 会启动一个“文件监视器 (StatReloader)”，每秒钟扫描你挂载目录下的所有文件，看看有没有代码改动。 因为你挂载了 saveload_backend-master 代码目录，文件很多，所以它每秒钟都在疯狂读取 SSD，产生了那 5G 的日志。
+
+解决方案：添加 --noreload 参数
+你只需要在 docker-compose.yml 文件中，给 tv-backend 服务显式添加一行 command 指令，强制关闭自动重载功能。
+
+1. 修改 docker-compose.yml
+
+请编辑你的 yaml 文件，找到 tv-backend 部分，添加我下面高亮的那一行 (command: ...)：
+
+YAML
+
+  ```
+# 1. Django 后端
+  tv-backend:
+    container_name: tv-backend
+    build: ./saveload_backend-master
+    restart: always
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./saveload_backend-master:/app
+      - ./vipdoc:/data/tdx/vipdoc:ro
+    environment:
+      - TZ=Asia/Shanghai
+      - DATABASE_URL=postgres://creedxz:Rights_5743@db:5432/tradingview
+      - TDX_DATA_ROOT=/data/tdx
+    depends_on:
+      - db
+    # ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+    # 新增这一行！关闭自动重载，保护 SSD
+    command: python manage.py runserver 0.0.0.0:8000 --noreload
+    # ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+```
+2. 应用更改并重建容器
+
+修改保存后，在存放 docker-compose.yml 的目录下执行以下命令：
+
+Bash
+
+```
+# 重新创建并启动容器 (Docker 会检测到配置变动)
+docker-compose up -d tv-backend
+```
+3. 验证是否生效
+
+容器重启好后，查看日志确认一下：
+
+Bash
+
+`docker logs --tail 20 tv-backend`
+成功的标志：
+
+以前的日志： 会显示 Watching for file changes with StatReloader。
+现在的日志： 这句话消失了。只会显示 Starting development server at ...。
